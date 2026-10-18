@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shine欣｜韓國服飾商品圖整理工具（測試版）</title>
+<style>
+:root{--ink:#302b32;--muted:#746c76;--pink:#f5e5eb;--rose:#a74d70;--line:#eadfe5;--paper:#fffafc;--green:#e7f3ec;--amber:#fff3d9}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{padding:24px 18px 20px;background:linear-gradient(135deg,#f7e8ee,#fff5ed);border-bottom:1px solid var(--line)}
+.wrap{max-width:1100px;margin:auto}h1{font-size:25px;margin:0 0 7px}header p{margin:0;color:#695c65;line-height:1.5}
+main{padding:18px;max-width:1100px;margin:auto}.notice{padding:13px 14px;border:1px solid #ead6a6;background:var(--amber);border-radius:14px;font-size:14px;line-height:1.55;margin-bottom:16px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;margin-bottom:16px;box-shadow:0 3px 14px #44203808}
+h2{font-size:17px;margin:0 0 12px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,.button{border:0;border-radius:11px;padding:11px 14px;font-size:14px;font-weight:650;cursor:pointer;background:var(--rose);color:white}
+button.secondary{background:#f5edf1;color:#58394a;border:1px solid var(--line)}button:disabled{opacity:.45;cursor:not-allowed}
+input[type=file]{display:block;width:100%;padding:14px;border:1px dashed #d6a8bb;border-radius:12px;background:#fffafd;margin-bottom:12px}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.pill{border-radius:99px;background:#f5edf1;padding:7px 10px;font-size:12px;color:#63495a}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:13px}.toolbar input,.toolbar select,.card select,.card input[type=text]{border:1px solid var(--line);border-radius:9px;padding:9px;background:white;color:var(--ink);min-width:0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:11px}
+.card{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff;min-width:0}
+.thumb{height:170px;background:#f7f2f4;display:flex;align-items:center;justify-content:center;overflow:hidden}.thumb img{width:100%;height:100%;object-fit:contain}
+.cardbody{padding:9px}.filename{font-size:12px;line-height:1.35;overflow-wrap:anywhere;min-height:31px;color:#554a52;margin-bottom:8px}
+.card label{display:block;font-size:11px;color:var(--muted);margin:7px 0 4px}.card select,.card input[type=text]{width:100%;font-size:12px}
+.status{font-size:11px;border-radius:7px;padding:5px 7px;background:var(--amber);display:inline-block;margin-top:8px}
+.empty{text-align:center;color:var(--muted);padding:32px 10px;line-height:1.6}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+footer{padding:20px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:500px){h1{font-size:22px}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.thumb{height:155px}main{padding:12px}.panel{padding:13px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>Shine欣｜韓國服飾商品圖整理工具</h1><p>批次選圖・款式分組・人工確認・打包下載</p></div></header>
+<main>
+<div class="notice"><b>功能狀態提醒：</b>此版本在瀏覽器本機處理照片，不會自動傳給 ChatGPT。新增「自動找相似圖片（實驗版）」：以圖片視覺指紋找出相似圖並建立候選分組，不等同於 AI 商品同款辨識，結果必須人工確認。韓幣價格 OCR、可靠去價／影像修復與雲端保存尚未實作；不會假裝已完成。</div>
+<section class="panel">
+<h2>① 選擇商品照片（原本功能保留）</h2>
+<input id="files" type="file" accept="image/*" multiple>
+<p class="small">可繼續從 iPhone「照片」或「檔案」一次選取多張圖片。</p>
+<h2 style="margin-top:18px">新增：從 ZIP 壓縮檔匯入照片</h2>
+<input id="zipInput" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+<div class="row"><button id="importZip" disabled>解壓縮並加入圖片</button><button id="clear" class="secondary" disabled>清空本次照片</button><button id="zipAll" disabled>下載全部照片 ZIP</button></div>
+<div id="message" class="small" role="status" aria-live="polite" style="margin-top:10px">請選擇圖片或 ZIP 壓縮檔。匯入 ZIP 時會保留原本的選圖功能。</div>
+<div class="stats"><span class="pill" id="count">已選 0 張</span><span class="pill" id="groups">款式分組 0 組</span><span class="pill">支援多選照片</span></div>
+<div class="small">iPhone：點選上方選擇照片，可從「照片」或「檔案」選取。建議先用 10–20 張測試，再增加到 200 張以上。</div>
+</section>
+<section class="panel">
+<h2>② 檢查並整理照片</h2>
+<div class="toolbar">
+<input id="search" type="search" placeholder="搜尋檔名…" aria-label="搜尋檔名">
+<select id="filter"><option value="all">顯示全部</option><option value="pending">只看待確認</option><option value="grouped">只看已分組</option></select>
+<button id="autoGroup" disabled>自動找相似圖片（實驗版）</button><button id="newGroup" class="secondary" disabled>新增款式組</button>
+<button id="zipGroups" class="secondary" disabled>依款式分組下載 ZIP</button>
+</div>
+<p class="small">「自動找相似圖片」目前使用本機視覺指紋，主要適合找相似構圖／近似圖片；不是可靠的同款商品 AI。自動分組後請檢查每一組，並使用上方下拉選單修正。</p><div id="gallery" class="grid"><div class="empty">尚未選擇照片。<br>先選取商品照片，縮圖會顯示在這裡。</div></div>
+</section>
+<section class="panel">
+<h2>③ 目前可用與尚未完成的功能</h2>
+<ul>
+<li>已實作：多張圖片選取、ZIP 匯入、本機縮圖預覽、手動建立／指定款式組、標記待確認、原始照片 ZIP 與依分組 ZIP 下載。</li>
+<li>新增實驗功能：瀏覽器端圖片視覺指紋比對，可將非常相似的圖片建立候選分組；不是 AI 同款辨識，需人工檢查並修正。</li>
+<li>尚未實作：可靠的 AI 同款商品辨識、顏色辨識與原始排列還原、韓文價格 OCR、智慧去價與影像修復、雲端後端。</li>
+<li>此版本不會修改原圖，也不會把「待確認」標記成已去價。</li>
+<li>公開網址仍需部署；本檔本身不是公開網站，也不會在背景執行雲端 AI。</li>
+</ul>
+</section>
+</main>
+<footer>Shine欣 工具原型｜請先保留原始商品照片備份</footer>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let items=[], groupNames=['款式 01'];
+function say(message){$('message').textContent=message;}
+const safe=s=>s.replace(/[\\/:*?"<>|]/g,'_').slice(0,100);
+function update(){
+  $('count').textContent=`已選 ${items.length} 張`;
+  $('groups').textContent=`款式分組 ${new Set(items.filter(x=>x.group).map(x=>x.group)).size} 組`;
+  ['clear','zipAll','newGroup','zipGroups','autoGroup'].forEach(id=>$(id).disabled=!items.length);
+  $('importZip').disabled=!($('zipInput').files && $('zipInput').files.length) || !$('zipInput').files[0];
+  render();
+}
+function render(){
+ const q=$('search').value.toLowerCase(), f=$('filter').value;
+ const shown=items.filter(x=>(x.file.name.toLowerCase().includes(q))&&(f==='all'||(f==='pending'&&x.pending)||(f==='grouped'&&x.group)));
+ const g=$('gallery');g.innerHTML='';
+ if(!shown.length){g.innerHTML='<div class="empty">沒有符合條件的照片。</div>';return}
+ shown.forEach(x=>{
+  const card=document.createElement('article');card.className='card';
+  const thumb=document.createElement('div');thumb.className='thumb';
+  const img=document.createElement('img');img.src=x.url;img.alt=x.file.name;thumb.append(img);
+  const body=document.createElement('div');body.className='cardbody';
+  const fn=document.createElement('div');fn.className='filename';fn.textContent=x.file.name;
+  const gl=document.createElement('label');gl.textContent='款式分組';
+  const sel=document.createElement('select');sel.innerHTML='<option value="">尚未分組</option>'+groupNames.map(n=>`<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');sel.value=x.group||'';
+  sel.onchange=()=>{x.group=sel.value;update()};
+  const pl=document.createElement('label');pl.textContent='價格檢查狀態';
+  const pending=document.createElement('select');pending.innerHTML='<option value="1">待人工確認</option><option value="0">未檢查</option>';pending.value=x.pending?'1':'0';pending.onchange=()=>{x.pending=pending.value==='1';update()};
+  const rename=document.createElement('input');rename.type='text';rename.placeholder='自訂檔名（選填）';rename.value=x.custom||'';rename.onchange=()=>x.custom=rename.value;
+  const rl=document.createElement('label');rl.textContent='下載檔名';
+  const badge=document.createElement('span');badge.className='status';badge.textContent=x.pending?'價格／內容待人工確認':'尚未檢查價格';
+  body.append(fn,gl,sel,pl,pending,rl,rename,badge);card.append(thumb,body);g.append(card);
+ });
+}
+$('files').addEventListener('change',e=>{
+ const incoming=Array.from(e.target.files||[]);
+ let added=0;
+ incoming.forEach(file=>{if(!file.type.startsWith('image/'))return;items.push({file,url:URL.createObjectURL(file),group:'',pending:true,custom:''});added++});
+ e.target.value='';update();
+ if(added) say(`已加入 ${added} 張圖片，目前共 ${items.length} 張。`);
+});
+$('zipInput').addEventListener('change',()=>{
+ const f=$('zipInput').files[0];
+ $('importZip').disabled=!f;
+ say(f?`已選擇 ${f.name}（${(f.size/1024/1024).toFixed(1)} MB）。按「解壓縮並加入圖片」開始匯入。`:'請選擇 ZIP 壓縮檔。');
+});
+$('importZip').addEventListener('click',async()=>{
+ const zipFile=$('zipInput').files[0];
+ if(!zipFile){say('請先選擇 ZIP 壓縮檔。');return}
+ if(!window.JSZip){say('ZIP 解壓縮程式尚未載入。請確認網路連線，並在 Safari 或 Chrome 網頁中開啟此工具；iPhone「檔案」內的 HTML 預覽可能不會執行按鈕。');return}
+ const btn=$('importZip');btn.disabled=true;btn.textContent='正在解壓縮…';say('正在讀取 ZIP，照片很多時可能需要一點時間，請不要關閉頁面。');
+ try{
+  const archive=await JSZip.loadAsync(zipFile);
+  const entries=Object.values(archive.files).filter(entry=>!entry.dir && /\.(jpe?g|png|gif|webp|bmp|heic|avif)$/i.test(entry.name));
+  if(!entries.length){say('ZIP 裡沒有找到支援的圖片檔。請確認壓縮檔內含 JPG、PNG、WEBP 等圖片。');return}
+  let added=0, skipped=0;
+  for(let i=0;i<entries.length;i++){
+   const entry=entries[i];
+   try{
+    const blob=await entry.async('blob');
+    const name=entry.name.split('/').pop() || `image-${i+1}.jpg`;
+    const type=blob.type || (name.toLowerCase().endsWith('.png')?'image/png':name.toLowerCase().endsWith('.webp')?'image/webp':'image/jpeg');
+    const file=new File([blob],name,{type,lastModified:Date.now()});
+    items.push({file,url:URL.createObjectURL(blob),group:'',pending:true,custom:''});added++;
+   }catch(err){skipped++}
+   if(i%10===0){say(`正在解壓縮圖片… ${i+1}/${entries.length}`)}
+  }
+  update();say(`完成！新增 ${added} 張圖片，目前整理區共 ${items.length} 張。${skipped?`另有 ${skipped} 個檔案未能讀取。`:''}`);
+ }catch(err){console.error(err);say('無法讀取這個 ZIP。請確認檔案完整，並使用 Safari/Chrome 網頁開啟工具後再試。');}
+ finally{btn.textContent='解壓縮並加入圖片';btn.disabled=!$('zipInput').files[0];}
+});
+
+// Experimental local visual fingerprint: 8x8 grayscale average hash.
+// This finds near-duplicate/similar images; it cannot reliably identify the same garment across poses/colors.
+async function makeVisualHash(item){
+  if(item.hash) return item.hash;
+  const img = new Image();
+  img.src = item.url;
+  await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;});
+  const canvas=document.createElement('canvas'); canvas.width=9; canvas.height=8;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0,9,8);
+  const px=ctx.getImageData(0,0,9,8).data, gray=[];
+  for(let y=0;y<8;y++) for(let x=0;x<9;x++){
+    const k=(y*9+x)*4;
+    gray.push(0.299*px[k]+0.587*px[k+1]+0.114*px[k+2]);
+  }
+  let bits='';
+  for(let y=0;y<8;y++) for(let x=0;x<8;x++)
+    bits += gray[y*9+x] > gray[y*9+x+1] ? '1':'0';
+  item.hash=bits;
+  return bits;
+}
+function hashDistance(a,b){
+  let d=0; for(let i=0;i<a.length;i++) if(a[i]!==b[i]) d++; return d;
+}
+$('autoGroup').onclick=async()=>{
+  const btn=$('autoGroup');
+  btn.disabled=true; btn.textContent='正在比對圖片…';
+  say('正在本機分析圖片視覺特徵。圖片很多時請稍候，請不要關閉頁面。');
+  try{
+    const unhashed=items.filter(x=>!x.hash);
+    for(let i=0;i<unhashed.length;i++){
+      await makeVisualHash(unhashed[i]);
+      if(i%10===0) say(`正在分析圖片… ${i+1}/${unhashed.length}`);
+    }
+    // Union-find creates connected components among visually close images.
+    const parent=items.map((_,i)=>i);
+    const find=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+    const union=(a,b)=>{a=find(a);b=find(b);if(a!==b)parent[b]=a;};
+    let comparisons=0;
+    for(let i=0;i<items.length;i++){
+      for(let j=i+1;j<items.length;j++){
+        comparisons++;
+        if(hashDistance(items[i].hash,items[j].hash)<=9) union(i,j);
+      }
+      if(i%15===0) say(`正在比較圖片… ${i+1}/${items.length}`);
+    }
+    const components=new Map();
+    items.forEach((item,i)=>{const root=find(i);if(!components.has(root))components.set(root,[]);components.get(root).push(item);});
+    let groupNum=0, assigned=0;
+    for(const members of components.values()){
+      if(members.length<2) continue;
+      groupNum++;
+      let group=members[0].group;
+      if(!group){
+        group=`相似候選 ${String(groupNames.length+1).padStart(2,'0')}`;
+        groupNames.push(group);
+      }
+      members.forEach(item=>{if(!item.group){item.group=group;assigned++;}});
+    }
+    update();
+    say(`比對完成：找到 ${groupNum} 組含 2 張以上的相似圖片候選，${assigned} 張未分組圖片已加入候選組。這不是 AI 同款判定，請逐組人工確認；不同角度或不同顏色的同款可能未被合併。`);
+  }catch(err){
+    console.error(err);
+    say('部分圖片無法分析。請確認圖片格式可在瀏覽器顯示，並可重新嘗試；未完成的分類請人工處理。');
+  }finally{
+    btn.disabled=!items.length; btn.textContent='自動找相似圖片（實驗版）';
+  }
+};
+
+$('clear').onclick=()=>{items.forEach(x=>URL.revokeObjectURL(x.url));items=[];update();say('已清空本次照片。原始檔案不會被刪除。')};
+$('search').oninput=render;$('filter').onchange=render;
+$('newGroup').onclick=()=>{groupNames.push(`款式 ${String(groupNames.length+1).padStart(2,'0')}`);update()};
+async function makeZip(list,filename){
+ if(!window.JSZip){alert('ZIP 模組載入失敗，請確認網路連線後重新開啟此檔案。');return}
+ const zip=new JSZip();
+ list.forEach((x,i)=>{const prefix=x.group?safe(x.group)+'/':'';const base=safe(x.custom.trim()||x.file.name);zip.file(prefix+base,x.file)});
+ const blob=await zip.generateAsync({type:'blob'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+}
+$('zipAll').onclick=()=>makeZip(items,'Shine欣_全部原始照片.zip');
+$('zipGroups').onclick=()=>makeZip(items,'Shine欣_依款式分組原始照片.zip');
+update();
+</script>
+</body>
+</html>
